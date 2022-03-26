@@ -16,11 +16,14 @@ public class Project {
         this.testStatus = testStatus;
     }
 
-    public boolean hasTests() {
+    private boolean hasTests() {
         return testStatus != NO_TESTS;
     }
 
     public String runTests() {
+        if (!hasTests()) {
+            return "No tests";
+        }
         return testStatus == PASSING_TESTS ? "success" : "failure";
     }
 

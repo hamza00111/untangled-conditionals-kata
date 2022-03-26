@@ -15,47 +15,48 @@ public class Pipeline {
     }
 
     public void run(Project project) {
-        boolean testsPassed;
-        boolean deploySuccessful;
 
-        if (project.hasTests()) {
-            if ("success".equals(project.runTests())) {
-                log.info("Tests passed");
-                testsPassed = true;
-            } else {
-                log.error("Tests failed");
-                testsPassed = false;
-            }
-        } else {
-            log.info("No tests");
-            testsPassed = true;
-        }
+        if (!runTests(project)) return;
 
-        if (testsPassed) {
-            if ("success".equals(project.deploy())) {
-                log.info("Deployment successful");
-                deploySuccessful = true;
-            } else {
-                log.error("Deployment failed");
-                deploySuccessful = false;
-            }
-        } else {
-            deploySuccessful = false;
-        }
-
-        if (config.sendEmailSummary()) {
-            log.info("Sending email");
-            if (testsPassed) {
-                if (deploySuccessful) {
-                    emailer.send("Deployment completed successfully");
-                } else {
-                    emailer.send("Deployment failed");
-                }
-            } else {
-                emailer.send("Tests failed");
-            }
-        } else {
-            log.info("Email disabled");
-        }
+        deploy(project.deploy());
     }
+
+    private boolean runTests(Project project) {
+        String testResult = project.runTests();
+        return handleTestsResult(testResult);
+    }
+
+    private boolean handleTestsResult(String testResult) {
+        if ("failure".equals(testResult)) {
+            log.error("Tests failed");
+            sendEmail("Tests failed");
+            return false;
+        }
+        if ("success".equals(testResult)) {
+            log.info("Tests passed");
+            return true;
+        }
+        log.info(testResult);
+        return true;
+    }
+
+    private void sendEmail(String emailContent) {
+        if (!config.sendEmailSummary()) {
+            log.info("Email disabled");
+            return;
+        }
+        log.info("Sending email");
+        emailer.send(emailContent);
+    }
+
+    private void deploy(String deploymentResult) {
+        if (!"success".equals(deploymentResult)) {
+            log.error("Deployment failed");
+            sendEmail("Deployment failed");
+            return;
+        }
+        log.info("Deployment successful");
+        sendEmail("Deployment completed successfully");
+    }
+
 }
